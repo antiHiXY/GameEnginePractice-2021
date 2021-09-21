@@ -26,17 +26,17 @@ OgreGraphicsFramework::OgreGraphicsFramework() :
 	m_pRoot->initialise(false);
 
 	// Creating window
-	Ogre::uint32 width = 1280;
-	Ogre::uint32 height = 720;
-	Ogre::String sTitleName = "Game Engines Lecture 1";
+	const Ogre::uint32 width = 1280;
+	const Ogre::uint32 height = 720;
+	const Ogre::String titleName = "Game Engines Lecture 1";
 
 	Ogre::NameValuePairList params;
-	params.insert(std::make_pair("title", sTitleName));
+	params.insert(std::make_pair("title", titleName));
 	params.insert(std::make_pair("gamma", "true"));
 	params.insert(std::make_pair("FSAA", "false"));
 	params.insert(std::make_pair("vsync", "false"));
 
-	m_pRenderWindow = Ogre::Root::getSingleton().createRenderWindow(sTitleName, width, height, false, &params);
+	m_pRenderWindow = Ogre::Root::getSingleton().createRenderWindow(titleName, width, height, false, &params);
 
 	// Scene manager
 	m_pSceneManager = m_pRoot->createSceneManager(Ogre::SceneType::ST_GENERIC, 1);
@@ -58,7 +58,7 @@ OgreGraphicsFramework::OgreGraphicsFramework() :
 
 	if (!compositorManager->hasWorkspaceDefinition(workspaceName))
 	{
-		compositorManager->createBasicWorkspaceDef(workspaceName, Ogre::ColourValue::Blue);
+		compositorManager->createBasicWorkspaceDef(workspaceName, Ogre::ColourValue::Red);
 	}
 
 	m_pWorkspace = compositorManager->addWorkspace(m_pSceneManager, m_pRenderWindow->getTexture(), m_pCamera, workspaceName, true);
