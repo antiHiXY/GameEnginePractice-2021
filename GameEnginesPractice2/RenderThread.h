@@ -6,6 +6,8 @@
 
 #include "ProjectDefines.h"
 
+#include "MTQueue.h"
+
 class RenderEngine;
 
 enum RenderCommand : UINT32
@@ -45,13 +47,13 @@ private:
 	threadID m_nRenderThreadId;
 	threadID m_nMainThreadId;
 
-	volatile UINT32 m_nFlush;
+	std::atomic <UINT32> m_nFlush;
 
 	std::unique_ptr<std::thread> m_pThread;
 	
 	RenderEngine* m_pRenderEngine;
 	
-	std::vector<byte> m_Commands[2];
+	MTQueue<byte> m_Commands[2];
 	int m_nCurrentFrame;
 	int m_nFrameFill;
 

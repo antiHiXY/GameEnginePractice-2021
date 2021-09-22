@@ -7,7 +7,7 @@ std::mutex RC_CriticalSection;
 // Function to run render thread
 static unsigned RunThisThread(void* thisPtr)
 {
-	RenderThread* const self = (RenderThread*)thisPtr;
+	RenderThread* const self = static_cast<RenderThread*>(thisPtr);
 	self->Run();
 
 	return 0;
@@ -21,10 +21,10 @@ RenderThread::RenderThread(RenderEngine* pRenderEngine) :
 	m_nFlush(0),
 	m_pThread(nullptr)
 {
-	m_nMainThreadId = ::GetCurrentThreadId();
+	m_nMainThreadId = GetCurrentThreadId();
 
-	m_Commands[0].clear();
-	m_Commands[1].clear();
+	m_Commands[0].Clear();
+	m_Commands[1].Clear();
 }
 
 RenderThread::~RenderThread()
@@ -78,7 +78,7 @@ void RenderThread::NextFrame()
 
 bool RenderThread::CheckFlushCond()
 {
-	return *(int*)&m_nFlush != 0;
+	return *(reinterpret_cast <int*> (&m_nFlush)) != 0;
 }
 
 // Signal main thread, that he can continue his work
@@ -103,68 +103,68 @@ void RenderThread::ProcessCommands()
 
 	int n = 0;
 
-	while (n < m_Commands[m_nCurrentFrame].capacity())
+	while (n < m_Commands[m_nCurrentFrame].Capacity())
 	{
-		byte* ptr = m_Commands[m_nCurrentFrame].data() + n;
+		byte* ptr = *m_Commands[m_nCurrentFrame] + n;
 		n += sizeof(UINT32);
-		UINT32 nCommandType =*((UINT32*)ptr);
+		UINT32 nCommandType =*(reinterpret_cast <UINT32*> (ptr));
 
 		switch (nCommandType)
 		{
-		case eRC_Init:
-		{
-			m_pRenderEngine->RT_Init();
-			break;
-		}
-		case eRC_SetupDefaultCamera:
-		{
-			m_pRenderEngine->RT_SetupDefaultCamera();
-			break;
-		}
-		case eRC_SetupDefaultCompositor:
-		{
-			m_pRenderEngine->RT_SetupDefaultCompositor();
-			break;
-		}
-		case eRC_LoadDefaultResources:
-		{
-			m_pRenderEngine->RT_LoadDefaultResources();
-			break;
-		}
-		case eRC_LoadOgreHead:
-		{
-			m_pRenderEngine->RT_LoadOgreHead();
-			break;
-		}
-		case eRC_SetupDefaultLight:
-		{
-			m_pRenderEngine->RT_SetupDefaultLight();
-			break;
-		}
-		case eRC_OscillateCamera:
-		{
-			float time = ReadCommand<float>(n);
-			m_pRenderEngine->RT_OscillateCamera(time);
-			break;
-		}
+			case eRC_Init:
+			{
+				m_pRenderEngine->RT_Init();
+				break;
+			}
+			case eRC_SetupDefaultCamera:
+			{
+				m_pRenderEngine->RT_SetupDefaultCamera();
+				break;
+			}
+			case eRC_SetupDefaultCompositor:
+			{
+				m_pRenderEngine->RT_SetupDefaultCompositor();
+				break;
+			}
+			case eRC_LoadDefaultResources:
+			{
+				m_pRenderEngine->RT_LoadDefaultResources();
+				break;
+			}
+			case eRC_LoadOgreHead:
+			{
+				m_pRenderEngine->RT_LoadOgreHead();
+				break;
+			}
+			case eRC_SetupDefaultLight:
+			{
+				m_pRenderEngine->RT_SetupDefaultLight();
+				break;
+			}
+			case eRC_OscillateCamera:
+			{
+				float time = ReadCommand<float>(n);
+				m_pRenderEngine->RT_OscillateCamera(time);
+				break;
+			}
 		}
 	}
-
-	m_Commands[m_nCurrentFrame].shrink_to_fit();
+	m_Commands[m_nCurrentFrame].Clear();
 }
 
 // We process comands via byte* using std::vector as raw data.
 template <class T>
 T RenderThread::ReadCommand(int& nIndex)
 {
-	byte* Res = m_Commands[m_nCurrentFrame].data() + nIndex;
+	byte* Res = *m_Commands[m_nCurrentFrame] + nIndex;
 	nIndex += sizeof(T);
-	return *reinterpret_cast<const T*>(Res);
+	return *reinterpret_cast <const T*> (Res);
 }
 
 byte* RenderThread::AddCommand(RenderCommand eRC, size_t nParamBytes)
 {
 	UINT32 cmdSize = sizeof(RenderCommand) + nParamBytes;
+	/*
 	byte* storage = new byte[m_Commands[m_nFrameFill].capacity()];
 
 	memcpy(storage, m_Commands[m_nFrameFill].data(), m_Commands[m_nFrameFill].capacity());
@@ -172,19 +172,21 @@ byte* RenderThread::AddCommand(RenderCommand eRC, size_t nParamBytes)
 	memcpy(m_Commands[m_nFrameFill].data(), storage, m_Commands[m_nFrameFill].capacity() - cmdSize);
 
 	byte* ptr = m_Commands[m_nFrameFill].data() + m_Commands[m_nFrameFill].capacity() * sizeof(byte) - cmdSize;
+	*/
+	byte* ptr = m_Commands[m_nFrameFill].Resize(m_Commands[m_nFrameFill].Capacity() * sizeof(byte) + cmdSize);
 	AddDWORD(ptr, eRC);
 	return ptr;
 }
 
 void RenderThread::AddDWORD(byte*& ptr, UINT32 nVal)
 {
-	*(UINT32*)ptr = nVal;
+	*reinterpret_cast <UINT32*> (ptr) = nVal;
 	ptr += sizeof(UINT32);
 }
 
 void RenderThread::AddFloat(byte*& ptr, const float fVal)
 {
-	*(float*)ptr = fVal;
+	*reinterpret_cast <float*> (ptr) = fVal;
 	ptr += sizeof(float);
 }
 
@@ -296,7 +298,7 @@ void RenderThread::SyncMainWithRender()
 	{
 		LOADINGCOMMAND_CRITICAL_SECTION;
 		NextFrame();
-		m_Commands[m_nFrameFill].shrink_to_fit();
+		m_Commands[m_nFrameFill].Clear();
 	}
 
 	SignalRenderThread();
